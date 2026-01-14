@@ -48,22 +48,23 @@ export default function RegisterPage() {
         },
     })
 
-    // 确保 authStore 中有 register 方法，如果没有则使用 mock
+    // 调用 authStore 的注册方法
     const handleRegister = async (values: z.infer<typeof registerSchema>) => {
         setLoading(true)
         try {
-            if (register) {
-                await register(values.username, values.password, values.email)
-            } else {
-                // Mock 注册
-                await new Promise(resolve => setTimeout(resolve, 1000))
-                console.log('Registering:', values)
-            }
+            await register({
+                username: values.username,
+                password: values.password,
+                nickname: values.username, // 使用用户名作为默认昵称
+                email: values.email,
+            })
             toast.success('注册成功，请登录')
             navigate('/login')
         } catch (error) {
             console.error(error)
-            toast.error('注册失败，请稍后重试')
+            // 尝试从 API 响应中获取错误信息
+            const axiosError = error as { response?: { data?: { message?: string } } }
+            toast.error(axiosError.response?.data?.message || '注册失败，请稍后重试')
         } finally {
             setLoading(false)
         }

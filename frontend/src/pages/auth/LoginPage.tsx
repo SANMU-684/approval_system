@@ -46,24 +46,15 @@ export default function LoginPage() {
         setIsLoading(true)
 
         try {
-            // TODO: 替换为实际的 API 调用
-            // 模拟登录请求
-            await new Promise((resolve) => setTimeout(resolve, 1000))
-
-            // 模拟登录成功
-            const mockUser = {
-                id: '1',
-                username: username,
-                email: `${username}@example.com`,
-                role: 'user' as const,
-            }
-            const mockToken = 'mock-jwt-token'
-
-            login(mockUser, mockToken)
+            // 调用真实登录 API
+            await login(username, password)
             navigate('/dashboard')
         } catch (err) {
             // 处理登录失败
-            setError('登录失败，请检查用户名和密码')
+            const errorMessage = err instanceof Error ? err.message : '登录失败，请检查用户名和密码'
+            // 尝试从 API 响应中获取错误信息
+            const axiosError = err as { response?: { data?: { message?: string } } }
+            setError(axiosError.response?.data?.message || errorMessage)
             console.error('登录错误:', err)
         } finally {
             setIsLoading(false)

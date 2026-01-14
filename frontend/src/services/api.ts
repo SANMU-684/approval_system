@@ -47,9 +47,12 @@ api.interceptors.response.use(
         if (error.response) {
             // 处理 401 未授权
             if (error.response.status === 401) {
-                // 清除 Token 并重定向（可选，或由组件内的 effect 处理）
+                // 清除 Token 并重定向到登录页
                 useAuthStore.getState().logout()
-                // window.location.href = '/login' // 尽量避免直接操作 location
+                // 使用 window.location 跳转以确保完全刷新状态
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login'
+                }
             }
 
             // 可以添加更具体的错误处理逻辑

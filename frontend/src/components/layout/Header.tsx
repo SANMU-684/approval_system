@@ -18,6 +18,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Breadcrumbs } from './Breadcrumbs'
+import { ThemeToggle } from './ThemeToggle'
 
 
 export function Header() {
@@ -41,6 +42,9 @@ export function Header() {
 
 
             <div className="flex flex-1 items-center justify-end gap-4">
+                {/* 主题切换按钮 */}
+                <ThemeToggle />
+
                 {user && (
                     <span className="text-sm text-muted-foreground hidden md:inline-block">
                         欢迎, {user.username || 'User'}
