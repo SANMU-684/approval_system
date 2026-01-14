@@ -32,3 +32,6 @@ test-results
 .env
 .env.test
 .env.production
+
+# Backend sensitive configuration
+backend/src/main/resources/application.yml

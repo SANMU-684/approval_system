@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    # 数据库连接 URL（请确保已创建 approval_system 数据库）
+    url: jdbc:mysql://localhost:3306/approval_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: your_username
+    password: your_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      # 文件上传大小限制
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+jwt:
+  # JWT 密钥（生产环境请更换为更安全的密钥，建议256位以上随机字符串）
+  secret: your-jwt-secret-key-must-be-at-least-32-characters
+  # Token 过期时间：24小时（毫秒）
+  expiration: 86400000
+
+# 文件上传配置
+file:
+  upload-dir: D:/uploads/approval-system
+  access-path: /files
