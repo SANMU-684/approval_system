@@ -62,16 +62,13 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-            {/* 背景装饰 */}
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
-
-            <Card className="w-full max-w-md relative backdrop-blur-sm bg-card/90 border-border/50 shadow-2xl">
-                <CardHeader className="space-y-1 text-center">
-                    {/* Logo */}
-                    <div className="w-16 h-16 bg-linear-to-br from-primary to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+        <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+            <Card className="w-full max-w-[400px] border-border/40 shadow-xl bg-card">
+                <CardHeader className="space-y-2 text-center pb-2">
+                    {/* Logo Area - Simplified */}
+                    <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-2">
                         <svg
-                            className="w-8 h-8 text-primary-foreground"
+                            className="w-6 h-6 text-primary"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -84,9 +81,9 @@ export default function LoginPage() {
                             />
                         </svg>
                     </div>
-                    <CardTitle className="text-2xl font-bold">审批系统</CardTitle>
+                    <CardTitle className="text-2xl font-bold tracking-tight">欢迎回来</CardTitle>
                     <CardDescription>
-                        请登录您的账户以继续
+                        请输入您的账号密码以登录系统
                     </CardDescription>
                 </CardHeader>
 
@@ -94,7 +91,10 @@ export default function LoginPage() {
                     <CardContent className="space-y-4">
                         {/* 错误提示 */}
                         {error && (
-                            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+                            <div className="p-3 text-sm text-destructive bg-destructive/5 border border-destructive/10 rounded-md flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
                                 {error}
                             </div>
                         )}
@@ -105,35 +105,42 @@ export default function LoginPage() {
                             <Input
                                 id="username"
                                 type="text"
-                                placeholder="请输入用户名或邮箱"
+                                placeholder="name@example.com"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 required
                                 disabled={isLoading}
+                                className="h-10"
                                 autoComplete="username"
                             />
                         </div>
 
                         {/* 密码输入 */}
                         <div className="space-y-2">
-                            <Label htmlFor="password">密码</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">密码</Label>
+                                <a href="#" className="text-xs text-primary hover:underline">
+                                    忘记密码?
+                                </a>
+                            </div>
                             <Input
                                 id="password"
                                 type="password"
-                                placeholder="请输入密码"
+                                placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 disabled={isLoading}
+                                className="h-10"
                                 autoComplete="current-password"
                             />
                         </div>
                     </CardContent>
 
-                    <CardFooter className="flex flex-col space-y-4">
+                    <CardFooter className="flex flex-col space-y-4 pt-2">
                         <Button
                             type="submit"
-                            className="w-full"
+                            className="w-full h-10 font-medium"
                             disabled={isLoading}
                         >
                             {isLoading ? (
@@ -149,12 +156,12 @@ export default function LoginPage() {
                             )}
                         </Button>
 
-                        <p className="text-sm text-muted-foreground text-center">
-                            还没有账户？{' '}
-                            <a href="/register" className="text-primary hover:underline">
+                        <div className="text-center text-sm text-muted-foreground">
+                            还没有账户?{' '}
+                            <a href="/register" className="text-primary font-medium hover:underline">
                                 立即注册
                             </a>
-                        </p>
+                        </div>
                     </CardFooter>
                 </form>
             </Card>

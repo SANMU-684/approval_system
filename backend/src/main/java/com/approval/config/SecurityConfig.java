@@ -38,8 +38,8 @@ public class SecurityConfig {
         http
                 // 禁用 CSRF（因为使用 JWT，不需要 CSRF 保护）
                 .csrf(AbstractHttpConfigurer::disable)
-                // 禁用 CORS（由 CorsConfig 单独处理）
-                .cors(AbstractHttpConfigurer::disable)
+                // 启用 CORS 支持
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 设置会话管理为无状态（使用 JWT）
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 配置请求授权规则
@@ -54,6 +54,26 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * CORS 配置源
+     *
+     * @return CorsConfigurationSource 实例
+     */
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration config = new org.springframework.web.cors.CorsConfiguration();
+        config.addAllowedOriginPattern("*");
+        config.setAllowCredentials(true);
+        config.addAllowedMethod("*");
+        config.addAllowedHeader("*");
+        config.addExposedHeader("Authorization");
+        config.setMaxAge(3600L);
+
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     /**

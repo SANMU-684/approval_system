@@ -1,0 +1,137 @@
+package com.approval.controller;
+
+import com.approval.common.PageResult;
+import com.approval.common.Result;
+import com.approval.dto.UserDTO;
+import com.approval.dto.UserQueryDTO;
+import com.approval.service.UserService;
+import com.approval.vo.UserVO;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 用户管理控制器
+ * 提供用户CRUD和状态管理接口
+ */
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserService userService;
+
+    /**
+     * 分页查询用户列表
+     *
+     * @param keyword      搜索关键词
+     * @param departmentId 部门ID筛选
+     * @param status       状态筛选
+     * @param page         页码
+     * @param pageSize     每页条数
+     * @return 分页结果
+     */
+    @GetMapping
+    public Result<PageResult<UserVO>> getPagedUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+
+        UserQueryDTO query = UserQueryDTO.builder()
+                .keyword(keyword)
+                .departmentId(departmentId)
+                .status(status)
+                .page(page)
+                .pageSize(pageSize)
+                .build();
+
+        PageResult<UserVO> result = userService.getPagedUsers(query);
+        return Result.success(result);
+    }
+
+    /**
+     * 获取所有用户列表（用于下拉选择）
+     *
+     * @return 用户列表
+     */
+    @GetMapping("/all")
+    public Result<List<UserVO>> getAllUsers() {
+        List<UserVO> users = userService.getAllUsers();
+        return Result.success(users);
+    }
+
+    /**
+     * 获取用户详情
+     *
+     * @param id 用户ID
+     * @return 用户详情
+     */
+    @GetMapping("/{id}")
+    public Result<UserVO> getUserById(@PathVariable Long id) {
+        UserVO user = userService.getUserById(id);
+        return Result.success(user);
+    }
+
+    /**
+     * 创建用户
+     *
+     * @param dto 用户信息
+     * @return 创建的用户
+     */
+    @PostMapping
+    public Result<UserVO> createUser(@Valid @RequestBody UserDTO dto) {
+        UserVO user = userService.createUser(dto);
+        return Result.success("用户创建成功", user);
+    }
+
+    /**
+     * 更新用户
+     *
+     * @param id  用户ID
+     * @param dto 用户信息
+     * @return 更新后的用户
+     */
+    @PutMapping("/{id}")
+    public Result<UserVO> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UserDTO dto) {
+        UserVO user = userService.updateUser(id, dto);
+        return Result.success("用户更新成功", user);
+    }
+
+    /**
+     * 删除用户
+     *
+     * @param id 用户ID
+     * @return 删除结果
+     */
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return Result.success("用户删除成功", null);
+    }
+
+    /**
+     * 更新用户状态
+     *
+     * @param id   用户ID
+     * @param body 包含status字段的请求体
+     * @return 更新结果
+     */
+    @PutMapping("/{id}/status")
+    public Result<Void> updateUserStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, Integer> body) {
+        Integer status = body.get("status");
+        if (status == null) {
+            return Result.error(400, "状态值不能为空");
+        }
+        userService.updateUserStatus(id, status);
+        return Result.success("状态更新成功", null);
+    }
+}
