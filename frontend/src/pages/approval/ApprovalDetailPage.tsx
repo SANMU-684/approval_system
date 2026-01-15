@@ -1,3 +1,9 @@
+/**
+ * 审批详情页面组件
+ *
+ * 展示审批详情，支持审批操作（通过/拒绝）和撤回。
+ */
+
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -9,35 +15,111 @@ import {
     CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { getApprovalDetail, getStatusBadge, type ApprovalRecord } from '@/services/approvalService'
+import {
+    getApprovalDetail,
+    getStatusBadge,
+    approveApproval,
+    withdrawApproval,
+    type ApprovalRecord
+} from '@/services/approvalService'
 import { getFileDownloadUrl, formatFileSize } from '@/services/fileService'
+import { useAuthStore } from '@/stores/authStore'
 import { toast } from 'sonner'
 
 export default function ApprovalDetailPage() {
     const { id } = useParams()
     const navigate = useNavigate()
+    const { user } = useAuthStore()
     const [record, setRecord] = useState<ApprovalRecord | null>(null)
     const [loading, setLoading] = useState(true)
+    const [actionLoading, setActionLoading] = useState(false)
+    const [comment, setComment] = useState('')
 
     // 加载详情
     useEffect(() => {
         if (!id) return
-
-        const loadDetail = async () => {
-            setLoading(true)
-            try {
-                const data = await getApprovalDetail(id)
-                setRecord(data)
-            } catch (error) {
-                console.error('加载详情失败:', error)
-                toast.error('无法获取审批详情')
-            } finally {
-                setLoading(false)
-            }
-        }
         loadDetail()
     }, [id])
+
+    /**
+     * 加载审批详情
+     */
+    const loadDetail = async () => {
+        setLoading(true)
+        try {
+            const data = await getApprovalDetail(id!)
+            setRecord(data)
+        } catch (error) {
+            console.error('加载详情失败:', error)
+            toast.error('无法获取审批详情')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    /**
+     * 判断当前用户是否为当前节点的审批人
+     */
+    const isCurrentApprover = (): boolean => {
+        if (!record || !user || !record.nodes) return false
+        // 状态必须是待审批或审批中
+        if (record.status !== 1 && record.status !== 2) return false
+        // 查找当前节点
+        const currentNode = record.nodes.find(
+            node => node.nodeOrder === record.currentNodeOrder && node.status === 0
+        )
+        return currentNode?.approverId === user.id
+    }
+
+    /**
+     * 判断当前用户是否可以撤回
+     */
+    const canWithdraw = (): boolean => {
+        if (!record || !user) return false
+        // 必须是发起人
+        if (record.initiatorId !== user.id) return false
+        // 状态必须是待审批或审批中
+        return record.status === 1 || record.status === 2
+    }
+
+    /**
+     * 处理审批操作
+     */
+    const handleApprove = async (approved: boolean) => {
+        if (!id) return
+        setActionLoading(true)
+        try {
+            await approveApproval(id, approved, comment)
+            toast.success(approved ? '审批已通过' : '审批已拒绝')
+            setComment('')
+            await loadDetail() // 重新加载详情
+        } catch (error: any) {
+            console.error('审批操作失败:', error)
+            toast.error(error.response?.data?.message || '审批操作失败')
+        } finally {
+            setActionLoading(false)
+        }
+    }
+
+    /**
+     * 处理撤回
+     */
+    const handleWithdraw = async () => {
+        if (!id) return
+        setActionLoading(true)
+        try {
+            await withdrawApproval(id)
+            toast.success('审批已撤回')
+            await loadDetail()
+        } catch (error: any) {
+            console.error('撤回失败:', error)
+            toast.error(error.response?.data?.message || '撤回失败')
+        } finally {
+            setActionLoading(false)
+        }
+    }
 
     /**
      * 解析内容JSON
@@ -119,7 +201,7 @@ export default function ApprovalDetailPage() {
                     {JSON.stringify(data, null, 2)}
                 </pre>
             )
-        } catch (e) {
+        } catch {
             return <div>{record.content}</div>
         }
     }
@@ -189,7 +271,18 @@ export default function ApprovalDetailPage() {
             }
             description={`发起时间: ${new Date(record.createdAt).toLocaleString()} | 类型: ${record.typeName}`}
             action={
-                <Button variant="outline" onClick={() => navigate('/approval')}>返回列表</Button>
+                <div className="flex gap-2">
+                    {canWithdraw() && (
+                        <Button
+                            variant="outline"
+                            onClick={handleWithdraw}
+                            disabled={actionLoading}
+                        >
+                            撤回
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={() => navigate('/approval')}>返回列表</Button>
+                </div>
             }
         >
             <div className="grid gap-6 lg:grid-cols-4">
@@ -241,6 +334,44 @@ export default function ApprovalDetailPage() {
                             </CardContent>
                         </Card>
                     )}
+
+                    {/* 审批操作区域 */}
+                    {isCurrentApprover() && (
+                        <Card className="border-primary/50">
+                            <CardHeader>
+                                <CardTitle className="text-primary">审批操作</CardTitle>
+                                <CardDescription>请填写审批意见并选择操作</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">审批意见（可选）</label>
+                                    <Textarea
+                                        placeholder="请输入审批意见..."
+                                        value={comment}
+                                        onChange={(e) => setComment(e.target.value)}
+                                        rows={3}
+                                    />
+                                </div>
+                                <div className="flex gap-3">
+                                    <Button
+                                        onClick={() => handleApprove(true)}
+                                        disabled={actionLoading}
+                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                    >
+                                        通过
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={() => handleApprove(false)}
+                                        disabled={actionLoading}
+                                        className="flex-1"
+                                    >
+                                        拒绝
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
                 {/* 右侧流程 */}
@@ -284,7 +415,7 @@ export default function ApprovalDetailPage() {
                                 {record.nodes?.map((node) => (
                                     <div key={node.id} className="relative">
                                         <div className={`absolute -left-5.25 top-1 w-3 h-3 rounded-full ring-4 ring-background ${node.status === 1 ? 'bg-green-500' :
-                                                node.status === 2 ? 'bg-red-500' : 'bg-yellow-400'
+                                            node.status === 2 ? 'bg-red-500' : 'bg-yellow-400'
                                             }`} />
                                         <div className="space-y-1">
                                             <div className="flex items-center justify-between">
@@ -302,14 +433,18 @@ export default function ApprovalDetailPage() {
                                 ))}
 
                                 {/* 结束节点（如果已完成） */}
-                                {(record.status === 3 || record.status === 4) && (
+                                {(record.status === 3 || record.status === 4 || record.status === 5) && (
                                     <div className="relative">
-                                        <div className={`absolute -left-5.25 top-1 w-3 h-3 rounded-full ring-4 ring-background ${record.status === 3 ? 'bg-green-500' : 'bg-red-500'
+                                        <div className={`absolute -left-5.25 top-1 w-3 h-3 rounded-full ring-4 ring-background ${record.status === 3 ? 'bg-green-500' :
+                                            record.status === 5 ? 'bg-gray-500' : 'bg-red-500'
                                             }`} />
                                         <div className="space-y-1">
-                                            <p className="text-sm font-medium">流程结束</p>
+                                            <p className="text-sm font-medium">
+                                                {record.status === 3 ? '流程结束（已通过）' :
+                                                    record.status === 5 ? '已撤回' : '流程结束（已拒绝）'}
+                                            </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {record.completedAt ? new Date(record.completedAt).toLocaleString() : ''}
+                                                {record.completedAt ? new Date(record.completedAt).toLocaleString() : new Date(record.updatedAt).toLocaleString()}
                                             </p>
                                         </div>
                                     </div>

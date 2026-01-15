@@ -86,6 +86,16 @@ export interface CreateApprovalRequest {
 }
 
 /**
+ * 审批操作请求
+ */
+export interface ApproveRequest {
+    /** 是否通过 */
+    approved: boolean
+    /** 审批意见 */
+    comment?: string
+}
+
+/**
  * 获取审批类型列表
  *
  * @returns 审批类型列表
@@ -128,6 +138,23 @@ export async function getMyApprovals(
 }
 
 /**
+ * 获取我的待办列表
+ *
+ * @param page 页码
+ * @param pageSize 每页条数
+ * @returns 分页结果
+ */
+export async function getTodoApprovals(
+    page: number = 1,
+    pageSize: number = 10
+): Promise<PaginatedData<ApprovalRecord>> {
+    const response = await api.get<ApiResponse<PaginatedData<ApprovalRecord>>>('/approvals/todo', {
+        params: { page, pageSize }
+    })
+    return response.data.data
+}
+
+/**
  * 获取审批详情
  *
  * @param id 审批ID
@@ -136,6 +163,30 @@ export async function getMyApprovals(
 export async function getApprovalDetail(id: string): Promise<ApprovalRecord> {
     const response = await api.get<ApiResponse<ApprovalRecord>>(`/approvals/${id}`)
     return response.data.data
+}
+
+/**
+ * 审批操作（通过/拒绝）
+ *
+ * @param id 审批ID
+ * @param approved 是否通过
+ * @param comment 审批意见
+ */
+export async function approveApproval(
+    id: string,
+    approved: boolean,
+    comment?: string
+): Promise<void> {
+    await api.post<ApiResponse<void>>(`/approvals/${id}/approve`, { approved, comment })
+}
+
+/**
+ * 撤回审批
+ *
+ * @param id 审批ID
+ */
+export async function withdrawApproval(id: string): Promise<void> {
+    await api.post<ApiResponse<void>>(`/approvals/${id}/withdraw`)
 }
 
 /**

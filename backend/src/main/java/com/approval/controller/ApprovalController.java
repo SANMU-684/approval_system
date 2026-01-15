@@ -3,6 +3,7 @@ package com.approval.controller;
 import com.approval.common.PageResult;
 import com.approval.common.Result;
 import com.approval.dto.ApprovalCreateRequest;
+import com.approval.dto.ApproveRequest;
 import com.approval.entity.ApprovalType;
 import com.approval.mapper.SysUserMapper;
 import com.approval.security.JwtTokenProvider;
@@ -86,6 +87,24 @@ public class ApprovalController {
     }
 
     /**
+     * 获取我的待办列表
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @param token    JWT Token
+     * @return 分页结果
+     */
+    @GetMapping("/todo")
+    public Result<PageResult<ApprovalRecordVO>> getTodoApprovals(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtTokenProvider.getUserIdFromToken(token.replace("Bearer ", ""), sysUserMapper);
+        IPage<ApprovalRecordVO> result = approvalService.getTodoApprovals(userId, page, pageSize);
+        return Result.success(PageResult.of(result));
+    }
+
+    /**
      * 获取审批详情
      *
      * @param id 审批ID
@@ -95,5 +114,41 @@ public class ApprovalController {
     public Result<ApprovalRecordVO> getApprovalDetail(@PathVariable String id) {
         ApprovalRecordVO record = approvalService.getApprovalDetail(id);
         return Result.success(record);
+    }
+
+    /**
+     * 审批操作（通过/拒绝）
+     *
+     * @param id      审批ID
+     * @param request 审批请求
+     * @param token   JWT Token
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/approve")
+    public Result<Void> approveApproval(
+            @PathVariable String id,
+            @Valid @RequestBody ApproveRequest request,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtTokenProvider.getUserIdFromToken(token.replace("Bearer ", ""), sysUserMapper);
+        approvalService.approve(id, userId, request.getApproved(), request.getComment());
+        log.info("用户 {} 审批 {}: {}", userId, id, request.getApproved() ? "通过" : "拒绝");
+        return Result.success();
+    }
+
+    /**
+     * 撤回审批
+     *
+     * @param id    审批ID
+     * @param token JWT Token
+     * @return 操作结果
+     */
+    @PostMapping("/{id}/withdraw")
+    public Result<Void> withdrawApproval(
+            @PathVariable String id,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtTokenProvider.getUserIdFromToken(token.replace("Bearer ", ""), sysUserMapper);
+        approvalService.withdraw(id, userId);
+        log.info("用户 {} 撤回审批 {}", userId, id);
+        return Result.success();
     }
 }

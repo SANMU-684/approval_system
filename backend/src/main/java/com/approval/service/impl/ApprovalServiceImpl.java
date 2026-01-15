@@ -6,6 +6,7 @@ import com.approval.exception.BusinessException;
 import com.approval.mapper.*;
 import com.approval.service.ApprovalService;
 import com.approval.service.FileService;
+import com.approval.service.NotificationService;
 import com.approval.vo.ApprovalRecordVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -34,6 +36,23 @@ public class ApprovalServiceImpl implements ApprovalService {
     private final SysDepartmentMapper sysDepartmentMapper;
     private final FileService fileService;
     private final AttachmentMapper attachmentMapper;
+    private final NotificationService notificationService;
+
+    /**
+     * 审批状态常量
+     */
+    private static final int STATUS_PENDING = 1;
+    private static final int STATUS_IN_PROGRESS = 2;
+    private static final int STATUS_APPROVED = 3;
+    private static final int STATUS_REJECTED = 4;
+    private static final int STATUS_WITHDRAWN = 5;
+
+    /**
+     * 节点状态常量
+     */
+    private static final int NODE_STATUS_PENDING = 0;
+    private static final int NODE_STATUS_APPROVED = 1;
+    private static final int NODE_STATUS_REJECTED = 2;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -67,7 +86,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .initiatorId(userId)
                 .priority(request.getPriority() != null ? request.getPriority() : 0)
                 .deadline(request.getDeadline())
-                .status(1) // 待审批
+                .status(STATUS_PENDING)
                 .currentNodeOrder(1)
                 .workflowId(workflow.getId())
                 .build();
@@ -77,15 +96,19 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         // 初始化审批节点
         SysUser initiator = sysUserMapper.selectById(userId);
+        Long firstApproverId = null;
         for (WorkflowNodeTemplate nodeTemplate : nodeTemplates) {
             Long approverId = resolveApproverId(nodeTemplate, initiator);
+            if (nodeTemplate.getNodeOrder() == 1) {
+                firstApproverId = approverId;
+            }
 
             ApprovalNode node = ApprovalNode.builder()
                     .approvalId(record.getId())
                     .nodeName(nodeTemplate.getNodeName())
                     .approverId(approverId)
                     .nodeOrder(nodeTemplate.getNodeOrder())
-                    .status(0) // 待审批
+                    .status(NODE_STATUS_PENDING)
                     .build();
 
             approvalNodeMapper.insert(node);
@@ -96,6 +119,15 @@ public class ApprovalServiceImpl implements ApprovalService {
             for (String attachmentId : request.getAttachmentIds()) {
                 fileService.updateApprovalId(attachmentId, record.getId());
             }
+        }
+
+        // 发送通知给第一个审批人
+        if (firstApproverId != null) {
+            notificationService.sendApprovalNotification(
+                    record.getId(),
+                    firstApproverId,
+                    "您有一条新的审批待处理",
+                    initiator.getNickname() + " 提交了" + approvalType.getName() + "，等待您审批");
         }
 
         return buildApprovalRecordVO(record, initiator, approvalType);
@@ -147,6 +179,178 @@ public class ApprovalServiceImpl implements ApprovalService {
         vo.setAttachments(attachments);
 
         return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void approve(String id, Long userId, boolean approved, String comment) {
+        ApprovalRecord record = approvalRecordMapper.selectById(id);
+        if (record == null) {
+            throw new BusinessException(2001, "审批记录不存在");
+        }
+
+        // 检查状态是否允许审批
+        if (record.getStatus() != STATUS_PENDING && record.getStatus() != STATUS_IN_PROGRESS) {
+            throw new BusinessException(2002, "当前状态不允许审批操作");
+        }
+
+        // 获取当前节点
+        ApprovalNode currentNode = approvalNodeMapper.selectCurrentNode(id, record.getCurrentNodeOrder());
+        if (currentNode == null) {
+            throw new BusinessException(2001, "当前审批节点不存在");
+        }
+
+        // 检查是否为当前节点的审批人
+        if (!currentNode.getApproverId().equals(userId)) {
+            throw new BusinessException(2003, "您无权审批此节点");
+        }
+
+        // 更新节点状态
+        currentNode.setStatus(approved ? NODE_STATUS_APPROVED : NODE_STATUS_REJECTED);
+        currentNode.setComment(comment);
+        currentNode.setApprovedAt(LocalDateTime.now());
+        approvalNodeMapper.updateById(currentNode);
+
+        SysUser approver = sysUserMapper.selectById(userId);
+
+        if (approved) {
+            // 检查是否还有下一个节点
+            ApprovalNode nextNode = approvalNodeMapper.selectCurrentNode(id, record.getCurrentNodeOrder() + 1);
+            if (nextNode != null) {
+                // 流转到下一节点
+                record.setStatus(STATUS_IN_PROGRESS);
+                record.setCurrentNodeOrder(record.getCurrentNodeOrder() + 1);
+                approvalRecordMapper.updateById(record);
+
+                // 通知下一审批人
+                notificationService.sendApprovalNotification(
+                        id,
+                        nextNode.getApproverId(),
+                        "您有一条新的审批待处理",
+                        record.getTitle() + " 已流转到您，请及时处理");
+                log.info("审批 {} 流转到节点 {}", id, nextNode.getNodeOrder());
+            } else {
+                // 所有节点通过，审批完成
+                record.setStatus(STATUS_APPROVED);
+                record.setCompletedAt(LocalDateTime.now());
+                approvalRecordMapper.updateById(record);
+
+                // 通知发起人
+                notificationService.sendApprovalNotification(
+                        id,
+                        record.getInitiatorId(),
+                        "您的审批已全部通过",
+                        record.getTitle() + " 已通过所有审批节点");
+                log.info("审批 {} 已全部通过", id);
+            }
+        } else {
+            // 拒绝，审批终止
+            record.setStatus(STATUS_REJECTED);
+            record.setCompletedAt(LocalDateTime.now());
+            approvalRecordMapper.updateById(record);
+
+            // 通知发起人
+            String rejectMessage = record.getTitle() + " 被 " + approver.getNickname() + " 拒绝";
+            if (comment != null && !comment.isEmpty()) {
+                rejectMessage += "，原因：" + comment;
+            }
+            notificationService.sendApprovalNotification(
+                    id,
+                    record.getInitiatorId(),
+                    "您的审批已被拒绝",
+                    rejectMessage);
+            log.info("审批 {} 被用户 {} 拒绝", id, userId);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void withdraw(String id, Long userId) {
+        ApprovalRecord record = approvalRecordMapper.selectById(id);
+        if (record == null) {
+            throw new BusinessException(2001, "审批记录不存在");
+        }
+
+        // 检查是否为发起人
+        if (!record.getInitiatorId().equals(userId)) {
+            throw new BusinessException(403, "只有发起人可以撤回审批");
+        }
+
+        // 检查状态
+        if (record.getStatus() != STATUS_PENDING && record.getStatus() != STATUS_IN_PROGRESS) {
+            throw new BusinessException(2002, "当前状态不允许撤回");
+        }
+
+        // 更新状态为已撤回
+        record.setStatus(STATUS_WITHDRAWN);
+        record.setUpdatedAt(LocalDateTime.now());
+        approvalRecordMapper.updateById(record);
+
+        SysUser initiator = sysUserMapper.selectById(userId);
+
+        // 通知相关审批人
+        List<ApprovalNode> pendingNodes = approvalNodeMapper.selectList(
+                new LambdaQueryWrapper<ApprovalNode>()
+                        .eq(ApprovalNode::getApprovalId, id)
+                        .eq(ApprovalNode::getStatus, NODE_STATUS_PENDING));
+
+        for (ApprovalNode node : pendingNodes) {
+            notificationService.sendApprovalNotification(
+                    id,
+                    node.getApproverId(),
+                    "审批已被发起人撤回",
+                    initiator.getNickname() + " 撤回了审批：" + record.getTitle());
+        }
+
+        log.info("审批 {} 被用户 {} 撤回", id, userId);
+    }
+
+    @Override
+    public IPage<ApprovalRecordVO> getTodoApprovals(Long userId, int page, int pageSize) {
+        Page<ApprovalRecord> pageParam = new Page<>(page, pageSize);
+
+        // 查询用户作为当前节点审批人的记录
+        // 需要关联 approval_node 表
+        LambdaQueryWrapper<ApprovalNode> nodeWrapper = new LambdaQueryWrapper<>();
+        nodeWrapper.eq(ApprovalNode::getApproverId, userId)
+                .eq(ApprovalNode::getStatus, NODE_STATUS_PENDING);
+        List<ApprovalNode> pendingNodes = approvalNodeMapper.selectList(nodeWrapper);
+
+        if (pendingNodes.isEmpty()) {
+            return new Page<>(page, pageSize);
+        }
+
+        // 获取这些节点对应的审批记录
+        List<String> approvalIds = pendingNodes.stream()
+                .map(ApprovalNode::getApprovalId)
+                .distinct()
+                .toList();
+
+        LambdaQueryWrapper<ApprovalRecord> recordWrapper = new LambdaQueryWrapper<>();
+        recordWrapper.in(ApprovalRecord::getId, approvalIds)
+                .in(ApprovalRecord::getStatus, STATUS_PENDING, STATUS_IN_PROGRESS);
+
+        // 再次过滤：确保当前节点顺序匹配
+        recordWrapper.orderByDesc(ApprovalRecord::getPriority)
+                .orderByDesc(ApprovalRecord::getCreatedAt);
+
+        IPage<ApprovalRecord> recordPage = approvalRecordMapper.selectPage(pageParam, recordWrapper);
+
+        return recordPage.convert(record -> {
+            // 确保当前用户是当前节点的审批人
+            boolean isCurrentApprover = pendingNodes.stream()
+                    .anyMatch(node -> node.getApprovalId().equals(record.getId())
+                            && node.getNodeOrder().equals(record.getCurrentNodeOrder()));
+            if (!isCurrentApprover) {
+                return null;
+            }
+
+            SysUser initiator = sysUserMapper.selectById(record.getInitiatorId());
+            ApprovalType type = approvalTypeMapper.selectOne(
+                    new LambdaQueryWrapper<ApprovalType>()
+                            .eq(ApprovalType::getCode, record.getTypeCode()));
+            return buildApprovalRecordVO(record, initiator, type);
+        });
     }
 
     /**

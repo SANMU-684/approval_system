@@ -23,4 +23,17 @@ public interface ApprovalNodeMapper extends BaseMapper<ApprovalNode> {
                 .eq(ApprovalNode::getApprovalId, approvalId)
                 .orderByAsc(ApprovalNode::getNodeOrder));
     }
+
+    /**
+     * 获取指定审批的当前节点
+     *
+     * @param approvalId 审批记录ID
+     * @param nodeOrder  节点顺序
+     * @return 审批节点
+     */
+    default ApprovalNode selectCurrentNode(String approvalId, Integer nodeOrder) {
+        return selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ApprovalNode>()
+                .eq(ApprovalNode::getApprovalId, approvalId)
+                .eq(ApprovalNode::getNodeOrder, nodeOrder));
+    }
 }
