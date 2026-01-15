@@ -4,7 +4,7 @@
  * 配置路由和路由守卫
  */
 
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute, { PublicRoute } from '@/components/layout/ProtectedRoute'
 import { MainLayout } from '@/components/layout/MainLayout'
 import LoginPage from '@/pages/auth/LoginPage'
@@ -55,7 +55,7 @@ function App() {
         </Route>
 
         {/* 默认重定向到仪表盘 */}
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
         {/* 404 页面 */}
         <Route path="*" element={<NotFoundPage />} />
