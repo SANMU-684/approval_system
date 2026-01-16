@@ -5,6 +5,7 @@
  */
 
 import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
     Card,
@@ -13,6 +14,9 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
+import dashboardService, { type DashboardStatistics, type RecentActivity } from '@/services/dashboardService'
+import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/authStore'
 
 /**
  * 统计卡片组件
@@ -61,13 +65,39 @@ function StatCard({ title, value, description, icon, colorClass, onClick }: Stat
  */
 export default function DashboardPage() {
     const navigate = useNavigate()
+    const { user } = useAuthStore()
+    const [stats, setStats] = useState<DashboardStatistics>({
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        total: 0,
+    })
+    const [activities, setActivities] = useState<RecentActivity[]>([])
+    const [loading, setLoading] = useState(true)
 
-    // 模拟统计数据
-    const stats = {
-        pending: 5,
-        approved: 12,
-        rejected: 3,
-        total: 20,
+    // 加载数据
+    useEffect(() => {
+        loadData()
+    }, [])
+
+    /**
+     * 加载仪表盘数据
+     */
+    const loadData = async () => {
+        try {
+            setLoading(true)
+            const [statsData, activitiesData] = await Promise.all([
+                dashboardService.getStatistics(),
+                dashboardService.getRecentActivities(5)
+            ])
+            setStats(statsData)
+            setActivities(activitiesData)
+        } catch (error) {
+            console.error('加载数据失败:', error)
+            toast.error('加载数据失败')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -84,7 +114,22 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 统计卡片 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        {[...Array(4)].map((_, i) => (
+                            <Card key={i} className="animate-pulse">
+                                <CardHeader className="pb-2">
+                                    <div className="h-4 bg-muted rounded w-20"></div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="h-8 bg-muted rounded w-16 mb-2"></div>
+                                    <div className="h-3 bg-muted rounded w-32"></div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <StatCard
                         title="待处理"
                         value={stats.pending}
@@ -133,7 +178,8 @@ export default function DashboardPage() {
                         }
                         onClick={() => navigate('/approval')}
                     />
-                </div>
+                    </div>
+                )}
 
                 {/* 快捷操作 */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -163,27 +209,56 @@ export default function DashboardPage() {
                                 </svg>
                                 发起审批
                             </Button>
-                            <Button
-                                variant="outline"
-                                className="h-20 flex flex-col gap-2 cursor-pointer"
-                                onClick={() => navigate('/admin/workflows')}
-                            >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                系统设置
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="h-20 flex flex-col gap-2 cursor-pointer"
-                                onClick={() => navigate('/profile')}
-                            >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                个人中心
-                            </Button>
+                            {/* 根据角色显示不同的快捷操作 */}
+                            {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        className="h-20 flex flex-col gap-2 cursor-pointer"
+                                        onClick={() => navigate('/admin/departments')}
+                                    >
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                        部门管理
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="h-20 flex flex-col gap-2 cursor-pointer"
+                                        onClick={() => navigate('/admin/workflows')}
+                                    >
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        工作流配置
+                                    </Button>
+                                </>
+                            )}
+                            {user?.role === 'user' && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        className="h-20 flex flex-col gap-2 cursor-pointer"
+                                        onClick={() => navigate('/notifications')}
+                                    >
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                        </svg>
+                                        消息通知
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="h-20 flex flex-col gap-2 cursor-pointer"
+                                        onClick={() => navigate('/profile')}
+                                    >
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        个人中心
+                                    </Button>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -193,29 +268,49 @@ export default function DashboardPage() {
                             <CardDescription>您的最新操作记录</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">审批通过 - 请假申请</p>
-                                        <p className="text-xs text-muted-foreground">2 小时前</p>
-                                    </div>
+                            {loading ? (
+                                <div className="space-y-4">
+                                    {[...Array(3)].map((_, i) => (
+                                        <div key={i} className="flex items-center gap-4 animate-pulse">
+                                            <div className="w-2 h-2 rounded-full bg-muted" />
+                                            <div className="flex-1">
+                                                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                                                <div className="h-3 bg-muted rounded w-1/2"></div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">待审批 - 报销申请</p>
-                                        <p className="text-xs text-muted-foreground">5 小时前</p>
-                                    </div>
+                            ) : activities.length > 0 ? (
+                                <div className="space-y-4">
+                                    {activities.map((activity) => (
+                                        <div
+                                            key={activity.approvalId}
+                                            className="flex items-center gap-4 cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
+                                            onClick={() => navigate(`/approval/${activity.approvalId}`)}
+                                        >
+                                            <div className={`w-2 h-2 rounded-full ${
+                                                activity.activityType === 'approved' ? 'bg-green-500' :
+                                                activity.activityType === 'rejected' ? 'bg-red-500' :
+                                                activity.activityType === 'withdrawn' ? 'bg-gray-500' :
+                                                'bg-blue-500'
+                                            }`} />
+                                            <div className="flex-1">
+                                                <p className="text-sm font-medium">
+                                                    {activity.activityType === 'approved' ? '已通过' :
+                                                     activity.activityType === 'rejected' ? '已拒绝' :
+                                                     activity.activityType === 'withdrawn' ? '已撤回' :
+                                                     '已提交'} - {activity.title}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">{activity.relativeTime}</p>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">已提交 - 采购申请</p>
-                                        <p className="text-xs text-muted-foreground">昨天</p>
-                                    </div>
+                            ) : (
+                                <div className="text-center text-muted-foreground py-8">
+                                    <p>暂无活动记录</p>
                                 </div>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
