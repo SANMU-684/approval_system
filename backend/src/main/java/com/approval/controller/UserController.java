@@ -2,8 +2,11 @@ package com.approval.controller;
 
 import com.approval.common.PageResult;
 import com.approval.common.Result;
+import com.approval.dto.ChangePasswordRequest;
 import com.approval.dto.UserDTO;
 import com.approval.dto.UserQueryDTO;
+import com.approval.mapper.SysUserMapper;
+import com.approval.security.JwtTokenProvider;
 import com.approval.service.UserService;
 import com.approval.vo.UserVO;
 import jakarta.validation.Valid;
@@ -23,6 +26,8 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final SysUserMapper sysUserMapper;
 
     /**
      * 分页查询用户列表
@@ -133,5 +138,21 @@ public class UserController {
         }
         userService.updateUserStatus(id, status);
         return Result.success("状态更新成功", null);
+    }
+
+    /**
+     * 修改当前用户密码
+     *
+     * @param request 修改密码请求
+     * @param token   JWT Token
+     * @return 操作结果
+     */
+    @PutMapping("/me/password")
+    public Result<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtTokenProvider.getUserIdFromToken(token.replace("Bearer ", ""), sysUserMapper);
+        userService.changePassword(userId, request.getOldPassword(), request.getNewPassword());
+        return Result.success("密码修改成功", null);
     }
 }

@@ -164,7 +164,7 @@ export default function ApprovalListPage() {
                                         } else {
                                             return content.content || item.content
                                         }
-                                    } catch (e) {
+                                    } catch {
                                         return item.content
                                     }
                                 })()}

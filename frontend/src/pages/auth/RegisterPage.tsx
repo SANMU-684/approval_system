@@ -99,7 +99,7 @@ export default function RegisterPage() {
                             <FormField
                                 control={form.control}
                                 name="username"
-                                render={({ field }: { field: any }) => (
+                                render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>用户名</FormLabel>
                                         <FormControl>
@@ -112,7 +112,7 @@ export default function RegisterPage() {
                             <FormField
                                 control={form.control}
                                 name="email"
-                                render={({ field }: { field: any }) => (
+                                render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>邮箱</FormLabel>
                                         <FormControl>
@@ -125,7 +125,7 @@ export default function RegisterPage() {
                             <FormField
                                 control={form.control}
                                 name="password"
-                                render={({ field }: { field: any }) => (
+                                render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>密码</FormLabel>
                                         <FormControl>
@@ -138,7 +138,7 @@ export default function RegisterPage() {
                             <FormField
                                 control={form.control}
                                 name="confirmPassword"
-                                render={({ field }: { field: any }) => (
+                                render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>确认密码</FormLabel>
                                         <FormControl>
