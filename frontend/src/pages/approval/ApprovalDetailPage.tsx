@@ -408,55 +408,64 @@ export default function ApprovalDetailPage() {
                             <CardTitle className="text-base">审批流程</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="relative pl-4 border-l-2 border-muted space-y-8 py-2">
-                                {/* 发起节点 */}
-                                <div className="relative">
-                                    <div className="absolute -left-5.25 top-1 w-3 h-3 rounded-full bg-green-500 ring-4 ring-background" />
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium">发起申请</p>
-                                        <p className="text-xs text-muted-foreground">{new Date(record.createdAt).toLocaleString()}</p>
-                                        <p className="text-xs text-muted-foreground">{record.initiatorName}</p>
+                            <div className="relative py-4">
+                                <div className="absolute left-4 top-4 bottom-4 w-px bg-muted" />
+                                <div className="space-y-8">
+                                    {/* 发起节点 */}
+                                    <div className="flex items-start gap-6">
+                                        <div className="w-8 shrink-0 flex justify-center">
+                                            <div className="mt-1 h-3 w-3 rounded-full bg-green-500 ring-4 ring-background" />
+                                        </div>
+                                        <div className="flex-1 space-y-1 pl-2">
+                                            <p className="text-sm font-medium">发起申请</p>
+                                            <p className="text-xs text-muted-foreground">{new Date(record.createdAt).toLocaleString()}</p>
+                                            <p className="text-xs text-muted-foreground">{record.initiatorName}</p>
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* 审批节点 */}
-                                {record.nodes?.map((node) => (
-                                    <div key={node.id} className="relative">
-                                        <div className={`absolute -left-5.25 top-1 w-3 h-3 rounded-full ring-4 ring-background ${node.status === 1 ? 'bg-green-500' :
-                                            node.status === 2 ? 'bg-red-500' : 'bg-yellow-400'
-                                            }`} />
-                                        <div className="space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-sm font-medium">{node.nodeName}</p>
-                                                {renderNodeStatus(node.status)}
+                                    {/* 审批节点 */}
+                                    {record.nodes?.map((node) => (
+                                        <div key={node.id} className="flex items-start gap-6">
+                                            <div className="w-8 shrink-0 flex justify-center">
+                                                <div className={`mt-1 h-3 w-3 rounded-full ring-4 ring-background ${node.status === 1 ? 'bg-green-500' :
+                                                    node.status === 2 ? 'bg-red-500' : 'bg-yellow-400'
+                                                    }`} />
                                             </div>
-                                            {node.approvedAt && (
-                                                <p className="text-xs text-muted-foreground">{new Date(node.approvedAt).toLocaleString()}</p>
-                                            )}
-                                            {node.comment && (
-                                                <p className="text-xs bg-muted/50 p-2 rounded mt-1">"{node.comment}"</p>
-                                            )}
+                                            <div className="flex-1 space-y-1 pl-2">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-sm font-medium">{node.nodeName}</p>
+                                                    {renderNodeStatus(node.status)}
+                                                </div>
+                                                {node.approvedAt && (
+                                                    <p className="text-xs text-muted-foreground">{new Date(node.approvedAt).toLocaleString()}</p>
+                                                )}
+                                                {node.comment && (
+                                                    <p className="text-xs bg-muted/50 p-2 rounded mt-1">"{node.comment}"</p>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
 
-                                {/* 结束节点（如果已完成） */}
-                                {(record.status === 3 || record.status === 4 || record.status === 5) && (
-                                    <div className="relative">
-                                        <div className={`absolute -left-5.25 top-1 w-3 h-3 rounded-full ring-4 ring-background ${record.status === 3 ? 'bg-green-500' :
-                                            record.status === 5 ? 'bg-gray-500' : 'bg-red-500'
-                                            }`} />
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium">
-                                                {record.status === 3 ? '流程结束（已通过）' :
-                                                    record.status === 5 ? '已撤回' : '流程结束（已拒绝）'}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {record.completedAt ? new Date(record.completedAt).toLocaleString() : new Date(record.updatedAt).toLocaleString()}
-                                            </p>
+                                    {/* 结束节点（如果已完成） */}
+                                    {(record.status === 3 || record.status === 4 || record.status === 5) && (
+                                        <div className="flex items-start gap-6">
+                                            <div className="w-8 shrink-0 flex justify-center">
+                                                <div className={`mt-1 h-3 w-3 rounded-full ring-4 ring-background ${record.status === 3 ? 'bg-green-500' :
+                                                    record.status === 5 ? 'bg-gray-500' : 'bg-red-500'
+                                                    }`} />
+                                            </div>
+                                            <div className="flex-1 space-y-1 pl-2">
+                                                <p className="text-sm font-medium">
+                                                    {record.status === 3 ? '流程结束（已通过）' :
+                                                        record.status === 5 ? '已撤回' : '流程结束（已拒绝）'}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {record.completedAt ? new Date(record.completedAt).toLocaleString() : new Date(record.updatedAt).toLocaleString()}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

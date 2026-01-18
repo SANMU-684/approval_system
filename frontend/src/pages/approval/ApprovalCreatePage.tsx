@@ -125,8 +125,11 @@ export default function ApprovalCreatePage() {
     }
 
     return (
-        <div className="container max-w-4xl py-6 space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">发起审批</h1>
+        <div className="container mx-auto max-w-4xl py-8 space-y-8">
+            <div className="text-center space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight">发起审批</h1>
+                <p className="text-muted-foreground">请填写申请详情并提交审批</p>
+            </div>
 
             {/* 步骤 1: 选择审批类型 */}
             {step === 1 && (
