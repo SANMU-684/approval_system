@@ -159,6 +159,7 @@ public class UserController {
      * @return 操作结果
      */
     @PutMapping("/me/password")
+    @OperLog(module = LogModule.AUTH, operation = LogOperation.PASSWORD_CHANGE, description = "修改个人密码")
     public Result<Void> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
             @RequestHeader("Authorization") String token) {

@@ -48,11 +48,13 @@ const applyTheme = (theme: Theme) => {
  *
  * [x] 动画起点 x 坐标
  * [y] 动画起点 y 坐标
+ * [isDark] 当前是否为暗色主题（切换前的状态）
  * [callback] 切换主题的回调函数
  */
 const toggleWithAnimation = async (
     x: number,
     y: number,
+    isDark: boolean,
     callback: () => void
 ) => {
     // 检查浏览器是否支持 View Transition API
@@ -67,6 +69,9 @@ const toggleWithAnimation = async (
         Math.max(y, window.innerHeight - y)
     )
 
+    // 根据切换方向设置标记类（控制 z-index）
+    document.documentElement.classList.toggle('switching-to-dark', !isDark)
+
     // 启动 View Transition
     const transition = document.startViewTransition(() => {
         callback()
@@ -75,18 +80,26 @@ const toggleWithAnimation = async (
     // 等待过渡准备就绪
     await transition.ready
 
-    // 动画始终应用到新视图，圆环扩散出新主题色
+    // 根据当前主题状态决定动画方向：
+    // - 从暗色切换到亮色：圆环扩散出新主题色（::view-transition-new）
+    // - 从亮色切换到暗色：圆环收缩隐藏旧主题色（::view-transition-old）
+    const clipPathStart = isDark
+        ? `circle(0px at ${x}px ${y}px)`
+        : `circle(${endRadius}px at ${x}px ${y}px)`
+    const clipPathEnd = isDark
+        ? `circle(${endRadius}px at ${x}px ${y}px)`
+        : `circle(0px at ${x}px ${y}px)`
+    const pseudoElement = isDark
+        ? '::view-transition-new(root)'
+        : '::view-transition-old(root)'
+
     document.documentElement.animate(
-        {
-            clipPath: [
-                `circle(0px at ${x}px ${y}px)`,
-                `circle(${endRadius}px at ${x}px ${y}px)`
-            ]
-        },
+        { clipPath: [clipPathStart, clipPathEnd] },
         {
             duration: 500,
-            easing: 'ease-out',
-            pseudoElement: '::view-transition-new(root)'
+            easing: isDark ? 'ease-out' : 'ease-in',
+            pseudoElement,
+            fill: 'forwards'  // 保持动画最终状态，防止闪回
         }
     )
 }
@@ -107,7 +120,8 @@ export const useThemeStore = create<ThemeState>()(
 
                 // 如果提供了坐标，使用动画切换
                 if (x !== undefined && y !== undefined) {
-                    toggleWithAnimation(x, y, () => {
+                    const isDark = currentTheme === 'dark'
+                    toggleWithAnimation(x, y, isDark, () => {
                         applyTheme(newTheme)
                         set({ theme: newTheme })
                     })

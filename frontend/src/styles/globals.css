@@ -385,3 +385,13 @@
 ::view-transition-new(root) {
   z-index: 9999;
 }
+
+/* 亮色 -> 暗色时，反转 z-index，让旧视图在上层显示收缩动画 */
+.switching-to-dark::view-transition-old(root) {
+  z-index: 9999;
+}
+
+.switching-to-dark::view-transition-new(root) {
+  z-index: 1;
+}
+
