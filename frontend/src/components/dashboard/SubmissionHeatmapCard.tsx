@@ -74,10 +74,10 @@ export function SubmissionHeatmapCard({ data, loading = false }: SubmissionHeatm
     const getLevelColor = (level: number) => {
         switch (level) {
             case 0: return 'bg-muted' // 灰色
-            case 1: return 'bg-primary/20' // 浅色
-            case 2: return 'bg-primary/40'
-            case 3: return 'bg-primary/70'
-            case 4: return 'bg-primary' // 深色
+            case 1: return 'bg-primary-500/20' // 浅色
+            case 2: return 'bg-primary-500/40'
+            case 3: return 'bg-primary-500/70'
+            case 4: return 'bg-primary-500' // 深色
             default: return 'bg-muted'
         }
     }
@@ -127,10 +127,10 @@ export function SubmissionHeatmapCard({ data, loading = false }: SubmissionHeatm
                                 <span>Less</span>
                                 <div className="flex gap-1">
                                     <div className="w-3 h-3 rounded-xs bg-muted" />
-                                    <div className="w-3 h-3 rounded-xs bg-primary/20" />
-                                    <div className="w-3 h-3 rounded-xs bg-primary/40" />
-                                    <div className="w-3 h-3 rounded-xs bg-primary/70" />
-                                    <div className="w-3 h-3 rounded-xs bg-primary" />
+                                    <div className="w-3 h-3 rounded-xs bg-primary-500/20" />
+                                    <div className="w-3 h-3 rounded-xs bg-primary-500/40" />
+                                    <div className="w-3 h-3 rounded-xs bg-primary-500/70" />
+                                    <div className="w-3 h-3 rounded-xs bg-primary-500" />
                                 </div>
                                 <span>More</span>
                             </div>

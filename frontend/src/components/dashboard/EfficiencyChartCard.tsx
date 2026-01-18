@@ -30,7 +30,7 @@ interface EfficiencyChartCardProps {
 const chartConfig = {
     avgProcessTime: {
         label: '平均耗时 (小时)',
-        color: 'hsl(var(--primary))',
+        color: 'var(--color-primary-500)',
     },
 } satisfies ChartConfig
 
