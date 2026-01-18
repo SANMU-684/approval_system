@@ -12,6 +12,11 @@ import {
     PlusSquare,
     Inbox,
     CheckCircle2,
+    Building2,
+    Users,
+    ClipboardList,
+    Settings,
+    ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -34,7 +39,7 @@ interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
     const { pathname } = useLocation()
     const { isOpen, setOpen } = useSidebarStore()
-    const { logout } = useAuthStore()
+    const { logout, user } = useAuthStore()
 
     const navItems = [
         {
@@ -63,6 +68,41 @@ export function Sidebar({ className }: SidebarProps) {
         },
     ]
 
+    const adminItems = [
+        {
+            href: '/admin/departments',
+            label: '部门',
+            icon: Building2,
+            match: '/admin/departments',
+        },
+        {
+            href: '/admin/users',
+            label: '成员',
+            icon: Users,
+            match: '/admin/users',
+        },
+        {
+            href: '/admin/approval-types',
+            label: '类型',
+            icon: ClipboardList,
+            match: '/admin/approval-types',
+        },
+        {
+            href: '/admin/workflows',
+            label: '流程',
+            icon: Settings,
+            match: '/admin/workflows',
+        },
+        {
+            href: '/admin/logs',
+            label: '日志',
+            icon: ScrollText,
+            match: '/admin/logs',
+        },
+    ]
+
+    const isAdmin = user?.role === 'admin' || user?.role === 'superadmin'
+
     // 侧边栏内容
     const SidebarContent = (
         <div className="h-full flex flex-col">
@@ -78,7 +118,7 @@ export function Sidebar({ className }: SidebarProps) {
                 <nav className="flex flex-col items-center gap-3">
                     {navItems.map((link) => {
                         const Icon = link.icon
-                        const isActive = pathname === link.match
+                        const isActive = pathname.startsWith(link.match)
 
                         return (
                             <Link
@@ -100,6 +140,35 @@ export function Sidebar({ className }: SidebarProps) {
                     })}
                 </nav>
             </div>
+
+            {isAdmin && (
+                <div className="py-4 border-t">
+                    <nav className="flex flex-col items-center gap-3">
+                        {adminItems.map((link) => {
+                            const Icon = link.icon
+                            const isActive = pathname.startsWith(link.match)
+
+                            return (
+                                <Link
+                                    key={link.href}
+                                    to={link.href}
+                                    title={link.label}
+                                    className={cn(
+                                        'flex h-11 w-11 items-center justify-center rounded-xl border transition-colors',
+                                        isActive
+                                            ? 'border-primary/50 bg-primary/15 text-primary'
+                                            : 'border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                                    )}
+                                    onClick={() => setOpen(false)}
+                                >
+                                    <Icon className="h-5 w-5" />
+                                    <span className="sr-only">{link.label}</span>
+                                </Link>
+                            )
+                        })}
+                    </nav>
+                </div>
+            )}
 
             {/* 底部信息 */}
             <div className="p-4 border-t">
