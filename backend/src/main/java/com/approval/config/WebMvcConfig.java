@@ -2,6 +2,7 @@ package com.approval.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -23,7 +24,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
      * 将 /files/** 映射到本地磁盘目录
      */
     @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
         // 文件存储目录映射
         registry.addResourceHandler(accessPath + "/**")
                 .addResourceLocations("file:" + uploadDir + "/");

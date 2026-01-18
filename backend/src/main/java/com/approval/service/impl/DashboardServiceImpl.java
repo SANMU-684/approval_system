@@ -429,7 +429,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         for (ApprovalRecord record : records) {
             String date = record.getCreatedAt().toLocalDate().format(formatter);
-            dateCountMap.merge(date, 1, Integer::sum);
+            dateCountMap.merge(date, 1, (a, b) -> a + b);
         }
 
         // 4. 构建结果并计算热度等级

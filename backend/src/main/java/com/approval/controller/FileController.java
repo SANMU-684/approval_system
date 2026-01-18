@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 
 /**
  * 文件控制器
@@ -95,11 +96,11 @@ public class FileController {
             // 数据库存储路径示例: /files/2026/01/13/xxx.doc
             String relativePath = attachment.getFilePath().replace("/files", "");
             Path path = Paths.get(uploadDir + relativePath);
-            Resource resource = new UrlResource(path.toUri());
+            Resource resource = new UrlResource(Objects.requireNonNull(path.toUri()));
 
             if (resource.exists() || resource.isReadable()) {
                 return ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .contentType(Objects.requireNonNull(MediaType.APPLICATION_OCTET_STREAM))
                         .header(HttpHeaders.CONTENT_DISPOSITION,
                                 "attachment; filename=\""
                                         + new String(attachment.getOriginalName().getBytes("UTF-8"), "ISO-8859-1")
